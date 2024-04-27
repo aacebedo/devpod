@@ -248,7 +248,7 @@ func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger
 	}
 
 	// compute order here
-	featureSets, err := computeFeatureOrder(devContainerConfig, featureSets)
+	featureSets, err := computeFeatureOrder(devContainerConfig, featureSets, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "compute feature order")
 	}
@@ -270,12 +270,12 @@ func NormalizeFeatureID(featureID string) string {
 	return ref.String()
 }
 
-func computeFeatureOrder(devContainer *config.DevContainerConfig, features []*config.FeatureSet) ([]*config.FeatureSet, error) {
+func computeFeatureOrder(devContainer *config.DevContainerConfig, features []*config.FeatureSet, log log.Logger) ([]*config.FeatureSet, error) {
 	if len(devContainer.OverrideFeatureInstallOrder) == 0 {
-		return computeAutomaticFeatureOrder(features)
+		return computeAutomaticFeatureOrder(features,log)
 	}
 
-	automaticOrder, err := computeAutomaticFeatureOrder(features)
+	automaticOrder, err := computeAutomaticFeatureOrder(features,log)
 	if err != nil {
 		return nil, err
 	}
@@ -301,31 +301,33 @@ func computeFeatureOrder(devContainer *config.DevContainerConfig, features []*co
 	return orderedFeatures, nil
 }
 
-func computeAutomaticFeatureOrder(features []*config.FeatureSet) ([]*config.FeatureSet, error) {
+func computeAutomaticFeatureOrder(features []*config.FeatureSet, log log.Logger) ([]*config.FeatureSet, error) {
 	g := graph.NewGraph[*config.FeatureSet](graph.NewNode[*config.FeatureSet]("root", nil))
 
 	// build lookup map
 	lookup := map[string]*config.FeatureSet{}
 	for _, feature := range features {
-		lookup[feature.ConfigID] = feature
+		lookup[feature.Config.ID] = feature
 	}
 
 	// build graph
 	for _, feature := range features {
-		_, err := g.InsertNodeAt("root", feature.ConfigID, feature)
+		_, err := g.InsertNodeAt("root", feature.Config.ID, feature)
 		if err != nil {
 			return nil, err
 		}
 
 		// add edges
 		for _, installAfter := range feature.Config.InstallsAfter {
+
 			installAfterFeature, ok := lookup[installAfter]
 			if !ok {
 				continue
 			}
 
 			// add an edge from feature to installAfterFeature
-			_, err = g.InsertNodeAt(feature.ConfigID, installAfter, installAfterFeature)
+			_, err = g.InsertNodeAt(feature.Config.ID, installAfter, installAfterFeature)
+			log.Debugf("insert %s", installAfter)
 			if err != nil {
 				return nil, err
 			}
