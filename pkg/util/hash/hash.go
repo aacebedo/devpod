@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/pkg/longpath"
 	"github.com/moby/patternmatcher"
 	"github.com/pkg/errors"
+	"github.com/loft-sh/log"
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 	errFileReadOverLimit = errors.New("read files over limit")
 )
 
-func DirectoryHash(srcPath string, excludePatterns []string) (string, error) {
+func DirectoryHash(srcPath string, excludePatterns []string, log log.Logger) (string, error) {
 	srcPath, err := filepath.Abs(srcPath)
 	if err != nil {
 		return "", err
@@ -154,6 +155,7 @@ func DirectoryHash(srcPath string, excludePatterns []string) (string, error) {
 	}
 
 	// add to hash
+	log.Debugf("    Files: %s", retFiles)
 	sort.Strings(retFiles)
 	for _, f := range retFiles {
 		_, _ = hash.Write([]byte(f))

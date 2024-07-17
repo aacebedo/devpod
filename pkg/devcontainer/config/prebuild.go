@@ -58,7 +58,7 @@ func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, archite
 	excludes = append(excludes, DevPodContextFeatureFolder+"/")
 
 	// get hash of the context directory
-	contextHash, err := util.DirectoryHash(contextPath, excludes)
+	contextHash, err := util.DirectoryHash(contextPath, excludes, log)
 	if err != nil {
 		return "", err
 	}
@@ -68,6 +68,8 @@ func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, archite
 	log.Debugf("    Config: %s", string(configStr))
 	log.Debugf("    DockerfileContent: %s", dockerfileContent)
 	log.Debugf("    ContextHash: %s", contextHash)
+	log.Debugf("    ContextPath: %s", contextPath)
+
 	return "devpod-" + hash.String(architecture + string(configStr) + dockerfileContent + contextHash)[:32], nil
 }
 
